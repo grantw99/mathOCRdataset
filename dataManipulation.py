@@ -2,30 +2,92 @@ import os
 import cv2
 import numpy as np
 import random
+import csv
+import filecmp
+import itertools
+import math
 
-def randResize(cv2_in, new_path):
-    blank_image = np.zeros((45, 45, 3), np.uint8)
-    blank_image[:,0:45] = (255,255,255)
+def resizeFilePath(path):
+    im = cv2.imread(path)
+    cv2.resize(im, (32, 32))
+    cv2.imwrite(path, im)
 
-    new_dim = random.randint(30, 45)
+def listAllFiles():
+    all_files = []
+    for root, dirs, files in os.walk('./all_imgs'):
+        for name in files:
+            all_files.append("{}/{}".format(root.replace('\\', '/'), name))
+    return all_files
 
-    resized = cv2.resize(cv2_in, (new_dim, new_dim))
-    h1, w1 = resized.shape[:2]
-    h2, w2 = blank_image.shape[:2]
+def resizeAllFiles():
+    for im in listAllFiles():
+        resizeFilePath(im)
 
-    pip_h = (h2-h1)//2
-    pip_w = (w2-w1)//2
+def moveFiles():
+    label_table = {}
+    file_table = {}
+    count_table = {}
+    train_nums = {}
+    train_to_move = []
+    test_to_move = []
+    with open('./symbols.csv') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            if(row[1] == 'latex'):
+                pass
+            else:
+                label_table[row[0]] = row[1]
+    with open('./hasy-data-labels.csv') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            if(row[1] in label_table):
+                if(label_table[row[1]] in count_table):
+                    count_table[label_table[row[1]]] += 1
+                else:
+                    count_table[label_table[row[1]]] = 1
+                file_table[row[0]] = label_table[row[1]]
+    for label in count_table:
+        train_nums[label] = int((count_table[label]*.8)//1)
+    for f in file_table:
+        if train_nums[file_table[f]] >= 0:
+            train_nums[file_table[f]] -= 1
+            train_to_move.append({"src":f, "dest":"./all_imgs/train/{}/{}".format(file_table[f], f.split('/')[-1])})
+        else:
+            test_to_move.append({"src":f, "dest":"./all_imgs/test/{}/{}".format(file_table[f], f.split('/')[-1])})
+    for img in train_to_move:
+        os.rename(img['src'], img['dest'])
+    for img in test_to_move:
+        os.rename(img['src'], img['dest'])
 
-    blank_image[pip_h:pip_h+h1, pip_w:pip_w+w1] = resized
+def getNonUniqueFiles(directory):
+    dups = []
+    directory_files = os.listdir(directory)
+    to_search = itertools.combinations(os.listdir(directory), 2)
+    to_compare = (math.factorial(len(directory_files)))/(math.factorial(2)*math.factorial(len(directory_files)-2))
+    non_unique = []
+    template_dir = "{}/{}"
+    x = 0
+    for f in to_search:
+        if (filecmp.cmp(template_dir.format(directory, f[0]), template_dir.format(directory, f[1]))):
+            non_unique.append("{}/{}".format(directory, f[0]))
+        if (x%10000) == 0: 
+            print("{:.2f}% complete in {}".format(x/to_compare, directory))
+        x += 1
+    return(non_unique)
 
-    print("Write new image to: {}".format(new_path))
-    cv2.imwrite(new_path, blank_image)
+def getAllNonUniqueFiles():
+    tt = os.listdir("./all_imgs")
+    non_unique = []
+    for folder in tt:
+        for sub_folder in os.listdir("./all_imgs/{}".format(folder)):
+            print("Scanning {}/{}".format(folder, sub_folder))
+            temp = getNonUniqueFiles("./all_imgs/{}/{}".format(folder, sub_folder))
+            print("Deleting files: {}".format(temp))
+            delFilesInList(temp)
+    return non_unique
 
-all_dir = './all_imgs'
-for tt in os.listdir(all_dir):
-    for class_folder in os.listdir("{}/{}".format(all_dir, tt)):
-        for img in os.listdir("{}/{}/{}".format(all_dir, tt, class_folder)):
-            im_path = "{}/{}/{}/{}".format(all_dir, tt, class_folder, img)
-            resized_path = "{}/{}/{}/{}".format(all_dir, tt, class_folder, "_resized.".join(img.split('.')))
-            im_in = cv2.imread(im_path)
-            randResize(im_in, resized_path)
+def delFilesInList(to_delete):
+    for f in to_delete:
+        os.remove(f)        
+
+delFilesInList(getAllNonUniqueFiles())
