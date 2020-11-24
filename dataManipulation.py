@@ -90,4 +90,36 @@ def delFilesInList(to_delete):
     for f in to_delete:
         os.remove(f)        
 
-delFilesInList(getAllNonUniqueFiles())
+def getAvgTrainSize():
+    counts = {}
+    all_nums = []
+    tot = 0
+    for folder in os.listdir('./all_imgs/train'):
+        counts[folder] = len(os.listdir('./all_imgs/train/{}'.format(folder)))
+    for count in counts:
+        tot += counts[count]
+        all_nums.append(counts[count])
+    avg = int(tot//len(counts))
+    minimum = min(all_nums)
+    maximum = max(all_nums)
+    print("The average size of the folder is {} files\nThe minimum size folder has {} files\nThe maximum size folder has {} files".format(avg, minimum, maximum))
+    print(sorted(all_nums))
+    
+def trimTrainToNum(num):
+    for folder in os.listdir('./all_imgs/train'):
+        to_keep = os.listdir('./all_imgs/train/{}'.format(folder))[:4000]
+        removing = []
+        for f in os.listdir('./all_imgs/train/{}'.format(folder)):
+            if f not in to_keep:
+                removing.append('./all_imgs/train/{}/{}'.format(folder, f))
+        print("For {} removing {}, from {} to {}".format(folder, len(removing), len(os.listdir('./all_imgs/train/{}'.format(folder))), len(to_keep)))
+        for f in removing:
+            os.remove(f)
+
+def createListOfClasses():
+    d = []
+    for folder in os.listdir('./all_imgs/train'):
+        d.append(folder)
+    return d
+
+print(createListOfClasses())
