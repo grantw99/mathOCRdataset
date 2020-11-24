@@ -23,9 +23,7 @@ class VGGNet:
 	def build(width, height, depth, classes, activFct="softmax"): #finalAct='softmax' for single-label classification || finalAct='sigmoid' for multi-label classification 
 		# initialize the model along with the input shape to be
 		# "channels last" and the channels dimension itself
-		model = Sequential()
 		inputShape = (height, width, depth)
-		chanDim = -1
  
 		# if we are using "channels first", update the input shape
 		# and channels dimension
@@ -33,24 +31,17 @@ class VGGNet:
 			inputShape = (depth, height, width)
 			chanDim = 1
         # CONV => RELU => POOL
-		model.add(Conv2D(32, (2, 2), input_shape = inputShape)) 
-		model.add(Activation('relu')) 
-		model.add(MaxPooling2D(pool_size =(2, 2))) 
-		
-		model.add(Conv2D(32, (2, 2))) 
-		model.add(Activation('relu')) 
-		model.add(MaxPooling2D(pool_size =(2, 2))) 
-		
-		model.add(Conv2D(64, (2, 2))) 
-		model.add(Activation('relu')) 
-		model.add(MaxPooling2D(pool_size =(2, 2))) 
-		
-		model.add(Flatten()) 
-		model.add(Dense(64)) 
-		model.add(Activation('relu')) 
-		model.add(Dropout(0.5)) 
-		model.add(Dense(classes)) 
-		model.add(Activation(activFct))
+
+    model = Sequential([
+      Conv2D(32, (3,3), activation='relu', input_shape = inputShape,
+      MaxPooling2D(pool_size = (2,2)),
+      Conv2D(32, (3,3), activation='relu'),
+      MaxPooling2D(pool_size = (2,2)),
+      Flatten(),
+      Dense(1024, activation = 'tanh'),
+      Dropout(0.5),  #to reduce overfitting
+      Dense(classes, activation='softmax')
+    ])
 
  
 		# return the constructed network architecture
